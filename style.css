@@ -14,12 +14,12 @@
   --red: #c9372a;
 
   /* die colours */
-  --die-slam: #d94a2b;
-  --die-direction: #efe2c6;
-  --die-stunt: #f3c12f;
-  --die-shoot: #8f9aa3;
-  --die-fire: #f08a24;
-  --die-road: #2b2622;
+  --die-slam: #c8252b;
+  --die-direction: #6e3fb0;
+  --die-stunt: #2f8f46;
+  --die-shoot: #151515;
+  --die-fire: #f2c418;
+  --die-road: #8e9196;
 
   --display: "Avenir Next Condensed", "AvenirNextCondensed-Bold", "Futura", "Arial Narrow", system-ui, sans-serif;
   --body: -apple-system, BlinkMacSystemFont, system-ui, "Helvetica Neue", Arial, sans-serif;
@@ -352,7 +352,7 @@ button:disabled { opacity: 0.5; cursor: default; }
 .d-slam { background: var(--die-slam); }
 .d-direction { background: var(--die-direction); }
 .d-stunt { background: var(--die-stunt); }
-.d-shoot { background: var(--die-shoot); }
+.d-shoot { background: var(--die-shoot); box-shadow: inset 0 0 0 1px #6a6a6a; }
 .d-fire { background: var(--die-fire); }
 
 /* ---------- dice ---------- */
@@ -376,12 +376,12 @@ button:disabled { opacity: 0.5; cursor: default; }
   text-transform: uppercase;
 }
 .die-sm { --size: 50px; }
-.die-slam { background: var(--die-slam); color: #fff4e8; }
-.die-direction { background: var(--die-direction); }
-.die-stunt { background: var(--die-stunt); }
-.die-shoot { background: var(--die-shoot); color: #101418; }
-.die-fire { background: var(--die-fire); color: #241005; }
-.die-road { background: var(--die-road); color: var(--yellow); border: 2px solid #4c4136; }
+.die-slam { background: var(--die-slam); color: #fff6ee; }
+.die-direction { background: var(--die-direction); color: #f7f0ff; }
+.die-stunt { background: var(--die-stunt); color: #f2fff4; }
+.die-shoot { background: var(--die-shoot); color: #f4f4f4; border: 2px solid #4a4a4a; }
+.die-fire { background: var(--die-fire); color: #1e1606; }
+.die-road { background: var(--die-road); color: #17181a; }
 
 .face-text { font-size: calc(var(--size) * 0.3); line-height: 1; text-align: center; letter-spacing: 0.01em; }
 .face-text.long { font-size: calc(var(--size) * 0.2); }
