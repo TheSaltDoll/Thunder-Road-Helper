@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Thunder Road Companion</title>
+  <meta name="description" content="Road tile and dice helper for Thunder Road: Vendetta.">
+  <meta name="theme-color" content="#14100d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Thunder Road">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ============ SETUP ============ -->
+  <main id="setup" class="screen setup" hidden>
+    <header class="brand">
+      <div class="brand-kicker">Road Companion</div>
+      <h1>Thunder Road<span>Vendetta</span></h1>
+      <div class="brand-stripe" aria-hidden="true"></div>
+    </header>
+
+    <div class="setup-card">
+      <label class="toggle">
+        <span class="toggle-text">
+          <strong>Expansion road tiles</strong>
+          <small>Add tiles 6–10 from Carnage at Devil’s Run</small>
+        </span>
+        <input type="checkbox" id="optExpansion">
+        <span class="switch" aria-hidden="true"></span>
+      </label>
+      <label class="toggle">
+        <span class="toggle-text">
+          <strong>Roll the road die</strong>
+          <small>Roll it at the start of each turn and show the value</small>
+        </span>
+        <input type="checkbox" id="optRoadDie">
+        <span class="switch" aria-hidden="true"></span>
+      </label>
+    </div>
+
+    <button id="startBtn" class="btn btn-primary btn-xl">Start Engines</button>
+  </main>
+
+  <!-- ============ GAME ============ -->
+  <main id="game" class="screen game" hidden>
+    <header class="topbar">
+      <div class="turn">
+        <span class="lbl">Turn</span>
+        <span id="turnNum" class="turn-num">1</span>
+      </div>
+      <div class="road-die-wrap" id="roadDieWrap">
+        <div class="die die-road die-sm" id="roadDie"></div>
+        <span class="lbl">Road die</span>
+      </div>
+      <button id="menuBtn" class="icon-btn" aria-label="Menu">
+        <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="5" cy="12" r="2.4"/><circle cx="12" cy="12" r="2.4"/><circle cx="19" cy="12" r="2.4"/></svg>
+      </button>
+    </header>
+
+    <section class="road" aria-label="Road tiles in play">
+      <div class="travel" aria-hidden="true">▲ Direction of travel</div>
+      <div class="tile" id="tileLead"><span class="pos">Lead</span><span class="code"></span><span class="name"></span></div>
+      <div class="tile" id="tileMiddle"><span class="pos">Middle</span><span class="code"></span><span class="name"></span></div>
+      <div class="tile" id="tileRear"><span class="pos">Rear</span><span class="code"></span><span class="name"></span></div>
+    </section>
+
+    <div class="row-actions">
+      <button id="nextTurnBtn" class="btn btn-primary">Next Turn</button>
+      <button id="newTileBtn" class="btn btn-road">New Road Tile</button>
+    </div>
+
+    <h2 class="section-label">Roll for…</h2>
+    <section class="sit-grid">
+      <button class="sit" data-sit="slam"><strong>Slam</strong><small><i class="dot d-slam"></i>Slam <i class="dot d-direction"></i>Direction</small></button>
+      <button class="sit" data-sit="slamdir"><strong>Slam Direction</strong><small><i class="dot d-direction"></i>Direction</small></button>
+      <button class="sit" data-sit="shoot"><strong>Shoot</strong><small><i class="dot d-shoot"></i>Shooting</small></button>
+      <button class="sit" data-sit="fire"><strong>On Fire</strong><small><i class="dot d-fire"></i>Fire</small></button>
+      <button class="sit" data-sit="oil"><strong>Oil Slick</strong><small><i class="dot d-direction"></i>Direction</small></button>
+      <button class="sit" data-sit="shrapnel"><strong>Shrapnel</strong><small><i class="dot d-direction"></i>Direction</small></button>
+      <button class="sit" data-sit="dazed"><strong>Dazed</strong><small><i class="dot d-stunt"></i>Stunt <i class="dot d-direction"></i>Direction ×N</small></button>
+      <button class="sit" data-sit="blast"><strong>Blast Off</strong><small><i class="dot d-stunt"></i>Stunt <i class="dot d-direction"></i>Direction</small></button>
+    </section>
+  </main>
+
+  <!-- ============ RESULT SHEET ============ -->
+  <div id="sheetLayer" class="layer" hidden>
+    <div class="backdrop"></div>
+    <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+      <h2 id="sheetTitle" class="sheet-title"></h2>
+      <div id="diceRow" class="dice-row"></div>
+      <p id="resultText" class="result-text" aria-live="polite"></p>
+      <p id="resultSub" class="result-sub"></p>
+      <ol id="rollLog" class="roll-log" hidden></ol>
+      <div id="sheetActions" class="sheet-actions"></div>
+    </section>
+  </div>
+
+  <!-- ============ MENU SHEET ============ -->
+  <div id="menuLayer" class="layer" hidden>
+    <div class="backdrop" data-close-menu></div>
+    <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="menuTitle">
+      <h2 id="menuTitle" class="sheet-title">Game</h2>
+      <dl class="settings-list">
+        <div><dt>Expansion road tiles</dt><dd id="menuExpansion"></dd></div>
+        <div><dt>Road die</dt><dd id="menuRoadDie"></dd></div>
+      </dl>
+      <div class="sheet-actions">
+        <button id="newGameBtn" class="btn btn-danger">New Game</button>
+        <button class="btn btn-ghost" data-close-menu>Close</button>
+      </div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
