@@ -51,6 +51,19 @@
 
   const lc = (s) => s.toLowerCase();
 
+  // Stats screen: which dice to list, and the order of their face types
+  const STATS_DICE = ['road', 'slam', 'direction', 'stunt', 'shoot', 'fire'];
+  const STAT_FACES = {
+    road:      [['1', '1'], ['2', '2'], ['3', '3']],
+    slam:      [['Top', 'Top'], ['Bottom', 'Bottom']],
+    direction: [['Front Left', 'Front Left'], ['Front', 'Front'], ['Front Right', 'Front Right'],
+                ['Rear Left', 'Rear Left'], ['Rear', 'Rear'], ['Rear Right', 'Rear Right']],
+    stunt:     [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4']],
+    shoot:     [['Large', 'Large'], ['Any', 'Any'], ['Small/Medium', 'Small / Medium'], ['Small', 'Small']],
+    fire:      [['+1 Moves', '+1 Moves'], ['+2 Moves', '+2 Moves'], ['Fire Goes Out', 'Fire Goes Out'],
+                ['Vehicle Eliminated', 'Vehicle Eliminated']],
+  };
+
   // Situations rolled with a fixed set of dice
   const SITUATIONS = {
     slam:     { title: 'Slam',           dice: ['slam', 'direction'], reroll: true,
@@ -82,7 +95,18 @@
     }
     return Math.floor(Math.random() * n);
   }
+  // roll() is used for the tumbling animation and is never counted.
   const roll = (key) => DICE[key].faces[randInt(DICE[key].faces.length)];
+  // rollDie() is a real roll: it is recorded in this game's stats.
+  function rollDie(key) {
+    const value = roll(key);
+    if (game) {
+      if (!game.stats) game.stats = {};
+      const tally = game.stats[key] || (game.stats[key] = {});
+      tally[value] = (tally[value] || 0) + 1;
+    }
+    return value;
+  }
   function shuffle(arr) {
     for (let i = arr.length - 1; i > 0; i--) {
       const j = randInt(i + 1);
@@ -146,6 +170,8 @@
     sheetActions: $('sheetActions'),
     menuLayer: $('menuLayer'), menuExpansion: $('menuExpansion'), menuRoadDie: $('menuRoadDie'),
     newGameBtn: $('newGameBtn'),
+    stats: $('stats'), statsList: $('statsList'), statsSub: $('statsSub'),
+    statsBar: $('statsBar'), statsBtn: $('statsBtn'), statsBackBtn: $('statsBackBtn'),
   };
 
   const reducedMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -212,8 +238,60 @@
   function showScreen(name) {
     el.setup.hidden = name !== 'setup';
     el.game.hidden = name !== 'game';
+    el.stats.hidden = name !== 'stats';
+    el.statsBar.hidden = name !== 'game';
     window.scrollTo(0, 0);
   }
+
+  // ------------------------------------------------------------------
+  // Die stats screen
+  // ------------------------------------------------------------------
+  function faceShare(key, face) {
+    const faces = DICE[key].faces;
+    return faces.filter((f) => f === face).length / faces.length;
+  }
+
+  function renderStats() {
+    const stats = game.stats || {};
+    el.statsSub.textContent = `This game · Turn ${game.turn}`;
+    el.statsList.innerHTML = '';
+
+    STATS_DICE.forEach((key) => {
+      if (key === 'road' && !game.settings.roadDie) return;
+      const tally = stats[key] || {};
+      const total = Object.values(tally).reduce((a, b) => a + b, 0);
+      const rows = STAT_FACES[key].map(([face, label]) => {
+        const actual = tally[face] || 0;
+        const expected = total * faceShare(key, face);
+        return { label, actual, expected, sides: Math.round(faceShare(key, face) * 6) };
+      });
+      const scale = Math.max(1, ...rows.map((r) => Math.max(r.actual, r.expected)));
+
+      const card = document.createElement('section');
+      card.className = `stat-card stat-${key}`;
+      card.innerHTML = `
+        <header class="stat-head">
+          <span class="swatch die-${key}" aria-hidden="true"></span>
+          <h2>${DICE[key].name} die</h2>
+          <span class="stat-total">${total} roll${total === 1 ? '' : 's'}</span>
+        </header>
+        <div class="stat-cols" aria-hidden="true"><span>Side</span><span>Rolled</span><span>Expected</span></div>
+        ${rows.map((r) => `
+          <div class="stat-row">
+            <span class="stat-face">${r.label}<small>${r.sides} of 6</small></span>
+            <span class="stat-act">${r.actual}</span>
+            <span class="stat-exp">${r.expected.toFixed(2)}</span>
+            <div class="stat-bar" aria-hidden="true">
+              <i class="fill" style="width:${(r.actual / scale) * 100}%"></i>
+              ${total ? `<i class="mark" style="left:${(r.expected / scale) * 100}%"></i>` : ''}
+            </div>
+          </div>`).join('')}`;
+      el.statsList.append(card);
+    });
+  }
+
+  function openStats() { renderStats(); showScreen('stats'); }
+  function closeStats() { showScreen('game'); }
 
   function renderSetup() {
     const prefs = storeGet(PREFS_KEY) || { expansion: false, roadDie: true };
@@ -348,10 +426,12 @@
     const lead = deck.shift();
     game = {
       v: 1, settings, turn: 1,
-      roadDie: settings.roadDie ? roll('road') : null,
+      roadDie: null,
       rear, middle, lead, deck,
       sit: null,
+      stats: {},
     };
+    if (settings.roadDie) game.roadDie = rollDie('road');
     save();
     renderGame();
     renderTiles(true);
@@ -361,7 +441,7 @@
 
   function nextTurn() {
     game.turn += 1;
-    if (game.settings.roadDie) game.roadDie = roll('road');
+    if (game.settings.roadDie) game.roadDie = rollDie('road');
     save();
     el.turnNum.textContent = game.turn;
     if (game.settings.roadDie) animateDice([{ dieEl: el.roadDie, key: 'road', value: game.roadDie }]);
@@ -370,7 +450,7 @@
   function runSituation(type) {
     if (type === 'dazed') return dazedStart();
     const def = SITUATIONS[type];
-    const values = def.dice.map(roll);
+    const values = def.dice.map((key) => rollDie(key));
     game.sit = {
       type, title: def.title, reroll: !!def.reroll,
       dice: def.dice.map((key, i) => ({ key, value: values[i] })),
@@ -382,8 +462,8 @@
   }
 
   function dazedStart() {
-    const n = roll('stunt');
-    const d = roll('direction');
+    const n = rollDie('stunt');
+    const d = rollDie('direction');
     game.sit = {
       type: 'dazed', title: 'Dazed',
       dice: [{ key: 'stunt', value: n }, { key: 'direction', value: d }],
@@ -397,7 +477,7 @@
 
   function dazedNext() {
     const sit = game.sit;
-    const d = roll('direction');
+    const d = rollDie('direction');
     sit.log.push(d);
     sit.dice[1].value = d;
     sit.text = `Vehicle moves ${lc(d)}`;
@@ -485,6 +565,8 @@
   el.menuBtn.addEventListener('click', openMenu);
   document.querySelectorAll('[data-close-menu]').forEach((b) => b.addEventListener('click', closeMenu));
   el.newGameBtn.addEventListener('click', newGame);
+  el.statsBtn.addEventListener('click', () => { if (!busy && !game.sit) openStats(); });
+  el.statsBackBtn.addEventListener('click', closeStats);
 
   if (game) renderGame(); else renderSetup();
   keepAwake();

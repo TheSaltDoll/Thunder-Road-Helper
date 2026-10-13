@@ -88,6 +88,33 @@
     </section>
   </main>
 
+  <!-- ============ DIE STATS ============ -->
+  <main id="stats" class="screen stats" hidden>
+    <header class="stats-top">
+      <button id="statsBackBtn" class="back-btn" aria-label="Back to game">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 4 7 12l8 8" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Back
+      </button>
+      <div class="stats-heading">
+        <h1>Die Stats</h1>
+        <span id="statsSub" class="lbl"></span>
+      </div>
+    </header>
+    <p class="stats-legend">
+      <span><i class="lg-fill"></i>Rolled</span>
+      <span><i class="lg-mark"></i>Expected</span>
+    </p>
+    <div id="statsList" class="stats-list"></div>
+  </main>
+
+  <!-- pinned bar on the play screen -->
+  <nav id="statsBar" class="stats-bar" hidden>
+    <button id="statsBtn" class="stats-btn">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="3" y="12" width="4" height="9" rx="1"/><rect x="10" y="6" width="4" height="15" rx="1"/><rect x="17" y="9" width="4" height="12" rx="1"/></svg>
+      Die Stats
+    </button>
+  </nav>
+
   <!-- ============ RESULT SHEET ============ -->
   <div id="sheetLayer" class="layer" hidden>
     <div class="backdrop"></div>
