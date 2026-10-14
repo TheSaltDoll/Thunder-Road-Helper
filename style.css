@@ -541,7 +541,10 @@ button:disabled { opacity: 0.5; cursor: default; }
 .settings-list dd { margin: 0; font-weight: 700; }
 
 /* ---------- pinned stats bar ---------- */
-.game { padding-bottom: calc(58px + env(safe-area-inset-bottom)); }
+/* Extra top clearance: iOS softens/blurs content right under the status bar,
+   so keep the first row of text clear of that zone. */
+.game, .stats { padding-top: 26px; }
+.game { padding-bottom: calc(50px + env(safe-area-inset-bottom)); }
 .stats-bar {
   position: fixed;
   left: 0; right: 0; bottom: 0;

@@ -1,5 +1,5 @@
 /* Offline support: serve the latest version when online, the cached copy when not. */
-const CACHE = 'trv-companion-v3';
+const CACHE = 'trv-companion-v4';
 const ASSETS = [
   './',
   './index.html',
