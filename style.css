@@ -307,9 +307,10 @@ button:disabled { opacity: 0.5; cursor: default; }
 /* ---------- situation buttons ---------- */
 .sit-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
 }
+.sit[data-sit="dazed"] { grid-column: 1 / -1; min-height: 52px; }
 .sit {
   display: flex;
   flex-direction: column;
@@ -317,7 +318,7 @@ button:disabled { opacity: 0.5; cursor: default; }
   justify-content: center;
   gap: 6px;
   min-height: 60px;
-  padding: 8px 14px;
+  padding: 8px 10px;
   text-align: left;
   border-radius: 16px;
   border: 1px solid var(--line);
@@ -329,12 +330,13 @@ button:disabled { opacity: 0.5; cursor: default; }
 .sit strong {
   font-family: var(--display);
   font-weight: 800;
-  font-size: 22px;
+  font-size: 19px;
   line-height: 1;
   text-transform: uppercase;
   letter-spacing: 0.02em;
 }
 .sit small {
+  font-size: 0 !important; /* 3 columns: show the die-colour dots only */
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -344,7 +346,7 @@ button:disabled { opacity: 0.5; cursor: default; }
 }
 .dot {
   display: inline-block;
-  width: 9px; height: 9px;
+  width: 10px; height: 10px;
   border-radius: 2px;
   margin-left: 2px;
 }
@@ -539,6 +541,60 @@ button:disabled { opacity: 0.5; cursor: default; }
 }
 .settings-list dt { color: var(--muted); }
 .settings-list dd { margin: 0; font-weight: 700; }
+
+/* ---------- paused Dazed strip ---------- */
+.dazed-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 8px;
+  padding: 6px 6px 6px 14px;
+  min-height: 50px;
+  border-radius: 14px;
+  background: rgba(110, 63, 176, 0.22);
+  border: 2px solid var(--die-direction);
+}
+.dazed-info { flex: 1; display: flex; flex-direction: column; line-height: 1.15; }
+.dazed-info strong {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 17px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.dazed-info span { font-size: 13px; color: var(--muted); }
+.strip-end, .strip-resume {
+  min-height: 40px;
+  border-radius: 10px;
+  font-family: var(--display);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.strip-end {
+  width: 40px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+}
+.strip-resume {
+  padding: 0 16px;
+  border: 0;
+  background: var(--die-direction);
+  color: #f7f0ff;
+  font-size: 16px;
+}
+.strip-end:active, .strip-resume:active { transform: scale(0.95); }
+.sit:disabled { opacity: 0.28; box-shadow: none; }
+.btn:disabled:not(.sheet-actions .btn) { opacity: 0.35; }
+
+/* sheet: smaller side-by-side buttons */
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.btn-small { min-height: 50px; font-size: 15px; letter-spacing: 0.03em; padding: 8px 10px; line-height: 1.1; }
+.btn-outline-danger { background: transparent; color: #ff8a76; border: 2px solid rgba(201, 55, 42, 0.8); }
+.roll-log li.cancelled { text-decoration: line-through; opacity: 0.55; }
 
 /* ---------- pinned stats bar ---------- */
 /* Extra top clearance: iOS softens/blurs content right under the status bar,

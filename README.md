@@ -1,6 +1,6 @@
 # Thunder Road Companion
 
-A phone-friendly helper for **Thunder Road: Vendetta**. It tracks the three road tiles in play, shuffles and draws road tiles, tracks the turn and road die, and rolls the dice for Slam, Slam Direction, Shoot, On Fire, Oil Slick, Shrapnel, Dazed and Blast Off.
+A phone-friendly helper for **Thunder Road: Vendetta**. It tracks the three road tiles in play, shuffles and draws road tiles, tracks the turn and road die, rolls the dice for Slam, Slam Direction, Shoot, On Fire, Oil Slick, Shrapnel, Dazed, Blast Off, Quake and Ramp, and keeps per-game die statistics.
 
 ## Put it on GitHub Pages
 

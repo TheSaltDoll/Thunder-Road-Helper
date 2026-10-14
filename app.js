@@ -80,7 +80,16 @@
                 text: ([d]) => `Shrapnel travels ${lc(d)}` },
     blast:    { title: 'Blast Off',      dice: ['stunt', 'direction'],
                 text: ([n, d]) => `Vehicle lands ${n} space${n === '1' ? '' : 's'} away to the ${lc(d)}` },
+    quake:    { title: 'Quake',          dice: ['direction'],
+                text: ([d]) => `All vehicles move ${lc(d)}` },
+    ramp:     { title: 'Ramp',           dice: ['stunt'],
+                text: ([n]) => `Vehicle lands ${n} space${n === '1' ? '' : 's'} to the front` },
   };
+
+  // While a Dazed is paused, only these may be resolved…
+  const ALLOWED_DURING_DAZED = new Set(['slam', 'slamdir', 'shoot', 'oil', 'quake', 'ramp']);
+  // …and these end the Dazed once resolved.
+  const ENDS_DAZED = new Set(['slam', 'slamdir', 'ramp']);
 
   // ------------------------------------------------------------------
   // Randomness
@@ -172,6 +181,8 @@
     newGameBtn: $('newGameBtn'),
     stats: $('stats'), statsList: $('statsList'), statsSub: $('statsSub'),
     statsBar: $('statsBar'), statsBtn: $('statsBtn'), statsBackBtn: $('statsBackBtn'),
+    rollLabel: $('rollLabel'), dazedStrip: $('dazedStrip'), dazedProgress: $('dazedProgress'),
+    dazedResumeBtn: $('dazedResumeBtn'), dazedEndBtn: $('dazedEndBtn'),
   };
 
   const reducedMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -321,7 +332,20 @@
     if (game.settings.roadDie && game.roadDie) setFace(el.roadDie, 'road', game.roadDie);
     renderTiles(false);
     showScreen('game');
+    updateControls();
     renderSheet(false);
+  }
+
+  // Enable/disable buttons and show the paused-Dazed strip.
+  function updateControls() {
+    const dz = game.dazed;
+    el.dazedStrip.hidden = !dz;
+    el.rollLabel.hidden = !!dz;
+    if (dz) el.dazedProgress.textContent = `${dz.log.length} of ${dz.total} moves rolled`;
+    el.nextTurnBtn.disabled = !!dz;
+    document.querySelectorAll('.sit').forEach((b) => {
+      b.disabled = !!dz && !ALLOWED_DURING_DAZED.has(b.dataset.sit);
+    });
   }
 
   // ------------------------------------------------------------------
@@ -373,6 +397,9 @@
         if (r) {
           li.innerHTML = `<b>${i + 1}</b>${r}`;
           if (i === sit.log.length - 1) li.className = 'latest';
+        } else if (sit.cancelled) {
+          li.innerHTML = `<b>${i + 1}</b>Cancelled`;
+          li.className = 'cancelled';
         } else {
           li.innerHTML = `<b>${i + 1}</b>—`;
           li.className = 'waiting';
@@ -385,10 +412,17 @@
 
     // actions
     el.sheetActions.innerHTML = '';
-    if (sit.type === 'dazed' && sit.log.length < sit.total) {
+    if (sit.type === 'dazed' && dazedHasMoves(sit)) {
+      const split = document.createElement('div');
+      split.className = 'split';
+      split.append(
+        button('Toxic Goo / Mine', 'btn-small btn-outline-danger', () => dazedCancel('Toxic Goo / Mine')),
+        button('Vehicle Eliminated', 'btn-small btn-outline-danger', () => dazedCancel('Vehicle eliminated')),
+      );
       el.sheetActions.append(
         button(`Next Direction Roll · ${sit.log.length + 1} of ${sit.total}`, 'btn-primary', dazedNext),
-        button('Clear', 'btn-ghost', clearSit),
+        button('Pause · Resolve Others', 'btn-secondary', dazedPause),
+        split,
       );
     } else {
       if (sit.reroll) el.sheetActions.append(button('Reroll', 'btn-secondary', () => runSituation(sit.type)));
@@ -412,6 +446,7 @@
     game.sit = null;
     save();
     el.sheetLayer.hidden = true;
+    updateControls();
   }
 
   // ------------------------------------------------------------------
@@ -449,15 +484,23 @@
 
   function runSituation(type) {
     if (type === 'dazed') return dazedStart();
+    if (game.dazed && !ALLOWED_DURING_DAZED.has(type)) return;
     const def = SITUATIONS[type];
+    // Slam / Slam Direction / Ramp end a paused Dazed (a Slam reroll keeps the note).
+    const endsDazed = (!!game.dazed && ENDS_DAZED.has(type)) ||
+      (!!game.sit && game.sit.type === type && game.sit.endedDazed);
+    if (endsDazed) game.dazed = null;
     const values = def.dice.map((key) => rollDie(key));
     game.sit = {
       type, title: def.title, reroll: !!def.reroll,
       dice: def.dice.map((key, i) => ({ key, value: values[i] })),
       text: def.text(values),
       danger: def.danger ? def.danger(values) : false,
+      endedDazed: endsDazed,
+      sub: endsDazed ? 'Remaining Dazed moves cancelled' : '',
     };
     save();
+    updateControls();
     renderSheet(def.dice.map((_, i) => i));
   }
 
@@ -491,6 +534,44 @@
     sit.sub = sit.log.length < sit.total
       ? `Direction roll ${sit.log.length} of ${sit.total}`
       : (sit.total === 1 ? 'Only 1 direction roll' : `All ${sit.total} direction rolls done`);
+  }
+
+  const dazedHasMoves = (dz) => !dz.cancelled && dz.log.length < dz.total;
+
+  // Close the sheet but keep the Dazed waiting in the paused slot.
+  function dazedPause() {
+    game.dazed = game.sit;
+    game.sit = null;
+    save();
+    el.sheetLayer.hidden = true;
+    updateControls();
+  }
+
+  function dazedResume() {
+    if (busy || game.sit || !game.dazed) return;
+    game.sit = game.dazed;
+    game.dazed = null;
+    save();
+    updateControls();
+    renderSheet(false);
+  }
+
+  // Toxic Goo / Mine / Vehicle Eliminated: cancel any remaining moves.
+  function dazedCancel(reason) {
+    const sit = game.sit;
+    sit.cancelled = true;
+    sit.sub = `${reason} · remaining Dazed moves cancelled`;
+    save();
+    renderSheet(false);
+  }
+
+  // The × on the paused strip.
+  function dazedEnd() {
+    if (busy || game.sit || !game.dazed) return;
+    if (!confirm('End this Dazed? Its remaining moves will be cancelled.')) return;
+    game.dazed = null;
+    save();
+    updateControls();
   }
 
   function newRoadTile() {
@@ -557,7 +638,7 @@
   // Wire up
   // ------------------------------------------------------------------
   el.startBtn.addEventListener('click', startGame);
-  el.nextTurnBtn.addEventListener('click', () => { if (!busy && !game.sit) nextTurn(); });
+  el.nextTurnBtn.addEventListener('click', () => { if (!busy && !game.sit && !game.dazed) nextTurn(); });
   el.newTileBtn.addEventListener('click', () => { if (!busy && !game.sit) newRoadTile(); });
   document.querySelectorAll('.sit').forEach((b) => {
     b.addEventListener('click', () => { if (!busy && !game.sit) runSituation(b.dataset.sit); });
@@ -567,6 +648,8 @@
   el.newGameBtn.addEventListener('click', newGame);
   el.statsBtn.addEventListener('click', () => { if (!busy && !game.sit) openStats(); });
   el.statsBackBtn.addEventListener('click', closeStats);
+  el.dazedResumeBtn.addEventListener('click', dazedResume);
+  el.dazedEndBtn.addEventListener('click', dazedEnd);
 
   if (game) renderGame(); else renderSetup();
   keepAwake();

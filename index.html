@@ -75,16 +75,28 @@
       <button id="newTileBtn" class="btn btn-road">New Road Tile</button>
     </div>
 
-    <h2 class="section-label">Roll for…</h2>
+    <h2 id="rollLabel" class="section-label">Roll for…</h2>
+    <div id="dazedStrip" class="dazed-strip" hidden>
+      <div class="dazed-info">
+        <strong>Dazed paused</strong>
+        <span id="dazedProgress"></span>
+      </div>
+      <button id="dazedEndBtn" class="strip-end" aria-label="End this Dazed">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+      </button>
+      <button id="dazedResumeBtn" class="strip-resume">Resume</button>
+    </div>
     <section class="sit-grid">
       <button class="sit" data-sit="slam"><strong>Slam</strong><small><i class="dot d-slam"></i>Slam <i class="dot d-direction"></i>Direction</small></button>
       <button class="sit" data-sit="slamdir"><strong>Slam Direction</strong><small><i class="dot d-direction"></i>Direction</small></button>
       <button class="sit" data-sit="shoot"><strong>Shoot</strong><small><i class="dot d-shoot"></i>Shooting</small></button>
-      <button class="sit" data-sit="fire"><strong>On Fire</strong><small><i class="dot d-fire"></i>Fire</small></button>
       <button class="sit" data-sit="oil"><strong>Oil Slick</strong><small><i class="dot d-direction"></i>Direction</small></button>
+      <button class="sit" data-sit="quake"><strong>Quake</strong><small><i class="dot d-direction"></i>Direction</small></button>
+      <button class="sit" data-sit="ramp"><strong>Ramp</strong><small><i class="dot d-stunt"></i>Stunt</small></button>
+      <button class="sit" data-sit="fire"><strong>On Fire</strong><small><i class="dot d-fire"></i>Fire</small></button>
       <button class="sit" data-sit="shrapnel"><strong>Shrapnel</strong><small><i class="dot d-direction"></i>Direction</small></button>
-      <button class="sit" data-sit="dazed"><strong>Dazed</strong><small><i class="dot d-stunt"></i>Stunt <i class="dot d-direction"></i>Direction ×N</small></button>
       <button class="sit" data-sit="blast"><strong>Blast Off</strong><small><i class="dot d-stunt"></i>Stunt <i class="dot d-direction"></i>Direction</small></button>
+      <button class="sit" data-sit="dazed"><strong>Dazed</strong><small><i class="dot d-stunt"></i>Stunt <i class="dot d-direction"></i>Direction ×N</small></button>
     </section>
   </main>
 
