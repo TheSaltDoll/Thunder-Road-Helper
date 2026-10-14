@@ -544,6 +544,10 @@ button:disabled { opacity: 0.5; cursor: default; }
 /* Extra top clearance: iOS softens/blurs content right under the status bar,
    so keep the first row of text clear of that zone. */
 .game, .stats { padding-top: 26px; }
+/* Home Screen app: the status-bar blur reaches further down, so clear it fully. */
+@media (display-mode: standalone) {
+  .game, .stats { padding-top: 44px; }
+}
 .game { padding-bottom: calc(50px + env(safe-area-inset-bottom)); }
 .stats-bar {
   position: fixed;
