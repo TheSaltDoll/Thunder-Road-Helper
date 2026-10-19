@@ -28,10 +28,18 @@
     <div class="setup-card">
       <label class="toggle">
         <span class="toggle-text">
-          <strong>Expansion road tiles</strong>
-          <small>Add tiles 6–10 from Carnage at Devil’s Run</small>
+          <strong>Carnage at Devil’s Run</strong>
+          <small>Add road tiles 6–10</small>
         </span>
         <input type="checkbox" id="optExpansion">
+        <span class="switch" aria-hidden="true"></span>
+      </label>
+      <label class="toggle">
+        <span class="toggle-text">
+          <strong>Ignition</strong>
+          <small>Add half-length road tiles 11–18, four of them curved</small>
+        </span>
+        <input type="checkbox" id="optIgnition">
         <span class="switch" aria-hidden="true"></span>
       </label>
       <label class="toggle">
@@ -65,9 +73,7 @@
 
     <section class="road" aria-label="Road tiles in play">
       <div class="travel" aria-hidden="true">▲ Direction of travel</div>
-      <div class="tile" id="tileLead"><span class="pos">Lead</span><span class="code"></span><span class="name"></span></div>
-      <div class="tile" id="tileMiddle"><span class="pos">Middle</span><span class="code"></span><span class="name"></span></div>
-      <div class="tile" id="tileRear"><span class="pos">Rear</span><span class="code"></span><span class="name"></span></div>
+      <div id="roadTiles" class="road-tiles"></div>
     </section>
 
     <div class="row-actions">
@@ -134,6 +140,7 @@
       <h2 id="sheetTitle" class="sheet-title"></h2>
       <div id="diceRow" class="dice-row"></div>
       <p id="resultText" class="result-text" aria-live="polite"></p>
+      <p id="resultAlert" class="result-alert" hidden></p>
       <p id="resultSub" class="result-sub"></p>
       <ol id="rollLog" class="roll-log" hidden></ol>
       <div id="sheetActions" class="sheet-actions"></div>
@@ -146,7 +153,8 @@
     <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="menuTitle">
       <h2 id="menuTitle" class="sheet-title">Game</h2>
       <dl class="settings-list">
-        <div><dt>Expansion road tiles</dt><dd id="menuExpansion"></dd></div>
+        <div><dt>Carnage at Devil’s Run</dt><dd id="menuExpansion"></dd></div>
+        <div><dt>Ignition</dt><dd id="menuIgnition"></dd></div>
         <div><dt>Road die</dt><dd id="menuRoadDie"></dd></div>
       </dl>
       <div class="sheet-actions">

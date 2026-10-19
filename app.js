@@ -17,10 +17,25 @@
     '8a': 'Zag',              '8b': "Serpent's Tongue",
     '9a': 'Scorcher',         '9b': 'Ring of Fire',
     '10a': 'Glass Oasis',     '10b': 'Boneyard',
+    // Ignition (half length; 11–14 are curved: side a curves right, side b curves left)
+    '11a': 'Highway 24',      '11b': 'Highway 42',
+    '12a': 'Highway 45',      '12b': 'Highway 54',
+    '13a': 'Highway 36',      '13b': 'Highway 63',
+    '14a': 'Highway 28',      '14b': 'Highway 82',
+    '15a': 'Highway 10',      '15b': 'Highway 1',
+    '16a': 'Highway 71',      '16b': 'Highway 17',
+    '17a': 'Highway 75',      '17b': 'Highway 57',
+    '18a': 'Highway 95',      '18b': 'Highway 59',
   };
   const START_TILES = ['1a', '1b'];
-  const LAST_BASE_TILE = 5;
-  const LAST_EXPANSION_TILE = 10;
+  const TILE_SETS = {
+    base:      [2, 5],
+    expansion: [6, 10],   // Carnage at Devil's Run
+    ignition:  [11, 18],
+  };
+  const ROAD_LENGTH = 3;        // keep the road at least this long
+  const CURVED = { 11: true, 12: true, 13: true, 14: true };
+  const CURVE_WORD = { R: 'right', L: 'left' };
 
   const DICE = {
     road:      { name: 'Road',      faces: ['1', '1', '1', '2', '2', '3'] },
@@ -130,12 +145,57 @@
   const tileNumber = (code) => parseInt(code, 10);
   const oppositeSide = (code) => code.slice(0, -1) + (code.endsWith('a') ? 'b' : 'a');
   const tileLabel = (code) => `${code} ${TILE_NAMES[code]}`;
+  const tileLength = (code) => (tileNumber(code) >= TILE_SETS.ignition[0] ? 0.5 : 1);
+  const curveOf = (code) => (CURVED[tileNumber(code)] ? (code.endsWith('a') ? 'R' : 'L') : null);
+  const roadLength = () => game.road.reduce((sum, c) => sum + tileLength(c), 0);
 
-  function buildDeck(expansion) {
-    const last = expansion ? LAST_EXPANSION_TILE : LAST_BASE_TILE;
+  function buildDeck(settings) {
     const deck = [];
-    for (let n = 2; n <= last; n++) deck.push(`${n}${randInt(2) ? 'b' : 'a'}`);
+    ['base', 'expansion', 'ignition'].forEach((set) => {
+      if (set !== 'base' && !settings[set]) return;
+      const [first, last] = TILE_SETS[set];
+      for (let n = first; n <= last; n++) deck.push(`${n}${randInt(2) ? 'b' : 'a'}`);
+    });
     return shuffle(deck);
+  }
+
+  // Draw onto the lead end of the road, keeping curves alternating.
+  // If the top tile would bend the same way as the last curve placed, it stays
+  // on top and the next tile that isn't a same-direction curve is drawn instead.
+  // Only if no curve of the needed direction is left in the deck is the top
+  // tile turned to its other side. (Holding instead of flipping matters: the
+  // road + deck cycle in a fixed order, so always flipping would freeze every
+  // curved tile on one side for the whole game.)
+  function drawTile() {
+    const deck = game.deck;
+    if (!deck.length) return null;
+    const last = game.lastCurve;
+    let idx = 0;
+    let flipped = false;
+    if (last && curveOf(deck[0]) === last) {
+      const need = last === 'R' ? 'L' : 'R';
+      if (deck.some((c) => curveOf(c) === need)) {
+        idx = deck.findIndex((c) => curveOf(c) !== last);
+      } else {
+        deck[0] = oppositeSide(deck[0]);
+        flipped = true;
+      }
+    }
+    const code = deck.splice(idx, 1)[0];
+    if (curveOf(code)) game.lastCurve = curveOf(code);
+    game.road.push(code);
+    return { code, flipped };
+  }
+
+  // Draw until the road is at least ROAD_LENGTH long.
+  function fillRoad() {
+    const added = [];
+    while (roadLength() < ROAD_LENGTH) {
+      const t = drawTile();
+      if (!t) break;
+      added.push(t);
+    }
+    return added;
   }
 
   // ------------------------------------------------------------------
@@ -155,12 +215,24 @@
     } catch (e) { /* storage unavailable: keep playing in memory */ }
   }
 
+  // Games saved before Ignition stored rear/middle/lead; convert them.
+  function migrate(g) {
+    if (g && g.v === 1 && TILE_NAMES[g.rear] && TILE_NAMES[g.middle] && TILE_NAMES[g.lead]) {
+      g.road = [g.rear, g.middle, g.lead];
+      delete g.rear; delete g.middle; delete g.lead;
+      g.settings.ignition = false;
+      g.lastCurve = null;
+      g.v = 2;
+    }
+    return g;
+  }
   function validGame(g) {
-    return g && g.v === 1 && TILE_NAMES[g.rear] && TILE_NAMES[g.middle] && TILE_NAMES[g.lead] &&
-      Array.isArray(g.deck) && g.settings && typeof g.turn === 'number';
+    return g && g.v === 2 && Array.isArray(g.road) && g.road.length > 0 &&
+      g.road.every((c) => TILE_NAMES[c]) && Array.isArray(g.deck) && g.settings &&
+      typeof g.turn === 'number';
   }
 
-  let game = storeGet(GAME_KEY);
+  let game = migrate(storeGet(GAME_KEY));
   if (!validGame(game)) game = null;
   const save = () => storeSet(GAME_KEY, game);
 
@@ -170,14 +242,14 @@
   const $ = (id) => document.getElementById(id);
   const el = {
     setup: $('setup'), game: $('game'),
-    optExpansion: $('optExpansion'), optRoadDie: $('optRoadDie'), startBtn: $('startBtn'),
+    optExpansion: $('optExpansion'), optIgnition: $('optIgnition'), optRoadDie: $('optRoadDie'), startBtn: $('startBtn'),
     turnNum: $('turnNum'), roadDieWrap: $('roadDieWrap'), roadDie: $('roadDie'),
     menuBtn: $('menuBtn'), nextTurnBtn: $('nextTurnBtn'), newTileBtn: $('newTileBtn'),
-    tiles: { lead: $('tileLead'), middle: $('tileMiddle'), rear: $('tileRear') },
+    roadTiles: $('roadTiles'),
     sheetLayer: $('sheetLayer'), sheetTitle: $('sheetTitle'), diceRow: $('diceRow'),
-    resultText: $('resultText'), resultSub: $('resultSub'), rollLog: $('rollLog'),
+    resultText: $('resultText'), resultSub: $('resultSub'), resultAlert: $('resultAlert'), rollLog: $('rollLog'),
     sheetActions: $('sheetActions'),
-    menuLayer: $('menuLayer'), menuExpansion: $('menuExpansion'), menuRoadDie: $('menuRoadDie'),
+    menuLayer: $('menuLayer'), menuExpansion: $('menuExpansion'), menuIgnition: $('menuIgnition'), menuRoadDie: $('menuRoadDie'),
     newGameBtn: $('newGameBtn'),
     stats: $('stats'), statsList: $('statsList'), statsSub: $('statsSub'),
     statsBar: $('statsBar'), statsBtn: $('statsBtn'), statsBackBtn: $('statsBackBtn'),
@@ -305,32 +377,43 @@
   function closeStats() { showScreen('game'); }
 
   function renderSetup() {
-    const prefs = storeGet(PREFS_KEY) || { expansion: false, roadDie: true };
+    const prefs = storeGet(PREFS_KEY) || { expansion: false, ignition: false, roadDie: true };
     el.optExpansion.checked = !!prefs.expansion;
+    el.optIgnition.checked = !!prefs.ignition;
     el.optRoadDie.checked = !!prefs.roadDie;
     showScreen('setup');
   }
 
-  function renderTiles(effect) {
-    ['lead', 'middle', 'rear'].forEach((pos) => {
-      const t = el.tiles[pos];
-      const code = game[pos];
-      t.querySelector('.code').textContent = code;
-      t.querySelector('.name').textContent = TILE_NAMES[code];
-      t.setAttribute('aria-label', `${pos} tile: ${tileLabel(code)}`);
-      t.classList.remove('fresh', 'shifted');
-      if (effect) {
-        void t.offsetWidth;
-        t.classList.add(pos === 'lead' ? 'fresh' : 'shifted');
-      }
-    });
+  const CURVE_ICON = {
+    R: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21V13a6 6 0 0 1 6-6h6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M15 3l4 4-4 4" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    L: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 21V13a6 6 0 0 0-6-6H6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M9 3 5 7l4 4" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  };
+
+  // Draw the road with the lead tile at the top. `freshCount` = tiles just added.
+  function renderTiles(freshCount) {
+    const road = game.road;
+    const last = road.length - 1;
+    el.roadTiles.innerHTML = '';
+    for (let i = last; i >= 0; i--) {
+      const code = road[i];
+      const pos = i === last ? 'Lead' : i === 0 ? 'Rear' : 'Middle';
+      const curve = curveOf(code);
+      const t = document.createElement('div');
+      t.className = `tile${tileLength(code) < 1 ? ' half' : ''}${i === last ? ' is-lead' : ''}${i === 0 ? ' is-rear' : ''}`;
+      t.innerHTML = `<span class="pos">${pos}</span><span class="code">${code}</span>` +
+        `<span class="name">${TILE_NAMES[code]}</span>` +
+        (curve ? `<span class="curve">${CURVE_ICON[curve]}Curves ${CURVE_WORD[curve]}</span>` : '');
+      t.setAttribute('aria-label', `${pos} tile: ${tileLabel(code)}${curve ? `, curves ${CURVE_WORD[curve]}` : ''}`);
+      if (freshCount) t.classList.add(i > last - freshCount ? 'fresh' : 'shifted');
+      el.roadTiles.append(t);
+    }
   }
 
   function renderGame() {
     el.turnNum.textContent = game.turn;
     el.roadDieWrap.hidden = !game.settings.roadDie;
     if (game.settings.roadDie && game.roadDie) setFace(el.roadDie, 'road', game.roadDie);
-    renderTiles(false);
+    renderTiles(0);
     showScreen('game');
     updateControls();
     renderSheet(false);
@@ -386,6 +469,8 @@
     el.resultText.textContent = sit.text;
     el.resultText.classList.toggle('danger', !!sit.danger);
     el.resultSub.textContent = sit.sub || '';
+    el.resultAlert.hidden = !sit.alert;
+    el.resultAlert.textContent = sit.alert || '';
 
     // Dazed roll log
     if (sit.type === 'dazed') {
@@ -453,23 +538,26 @@
   // Actions
   // ------------------------------------------------------------------
   function startGame() {
-    const settings = { expansion: el.optExpansion.checked, roadDie: el.optRoadDie.checked };
+    const settings = {
+      expansion: el.optExpansion.checked,
+      ignition: el.optIgnition.checked,
+      roadDie: el.optRoadDie.checked,
+    };
     storeSet(PREFS_KEY, settings);
-    const deck = buildDeck(settings.expansion);
-    const rear = START_TILES[randInt(2)];
-    const middle = deck.shift();
-    const lead = deck.shift();
     game = {
-      v: 1, settings, turn: 1,
+      v: 2, settings, turn: 1,
       roadDie: null,
-      rear, middle, lead, deck,
+      road: [START_TILES[randInt(2)]],
+      deck: buildDeck(settings),
+      lastCurve: null,
       sit: null,
       stats: {},
     };
+    fillRoad();
     if (settings.roadDie) game.roadDie = rollDie('road');
     save();
     renderGame();
-    renderTiles(true);
+    renderTiles(game.road.length);
     if (settings.roadDie) animateDice([{ dieEl: el.roadDie, key: 'road', value: game.roadDie }]);
     keepAwake();
   }
@@ -574,32 +662,57 @@
     updateControls();
   }
 
+  // Remove the rear tile: its other side goes to the bottom of the deck,
+  // except the start tiles (1a/1b), which leave the game.
+  function removeRear() {
+    const old = game.road.shift();
+    if (tileNumber(old) === 1) return { old, back: null };
+    const back = oppositeSide(old);
+    game.deck.push(back);
+    return { old, back };
+  }
+
+  // New Road Tile: remove the rear tile, draw at least one tile, keep drawing
+  // until the road is ROAD_LENGTH or more, then remove further rear tiles while
+  // the road would still be ROAD_LENGTH or more without them.
   function newRoadTile() {
-    const old = game.rear;
-    let fate;
-    if (tileNumber(old) === 1) {
-      fate = `${tileLabel(old)} left the road and is out of the game.`;
-    } else {
-      const opp = oppositeSide(old);
-      game.deck.push(opp);
-      fate = `${tileLabel(old)} left the road. ${tileLabel(opp)} goes to the bottom of the deck.`;
+    const removed = [removeRear()];
+    const added = [];
+    const first = drawTile();
+    if (first) added.push(first);
+    added.push(...fillRoad());
+    while (game.road.length > 1 && roadLength() - tileLength(game.road[0]) >= ROAD_LENGTH) {
+      removed.push(removeRear());
     }
-    game.rear = game.middle;
-    game.middle = game.lead;
-    const drawn = game.deck.shift();
-    if (!drawn) { // should never happen with the recycling rule, but never break the road
-      game.lead = game.middle;
-      fate += ' The road deck is empty.';
-    } else {
-      game.lead = drawn;
+
+    const lead = added[added.length - 1];
+    const lines = [];
+    if (added.length > 1) {
+      lines.push(`Also added behind it: ${added.slice(0, -1).map((a) => tileLabel(a.code)).join(', ')}`);
     }
+    added.forEach((a) => {
+      const c = curveOf(a.code);
+      if (c) {
+        lines.push(`${tileLabel(a.code)} curves ${CURVE_WORD[c]}` +
+          (a.flipped ? ' (turned to its other side so curves alternate)' : ''));
+      }
+    });
+    const alert = removed.length > 1
+      ? `Remove ${removed.length} tiles from the rear: ${removed.map((r) => tileLabel(r.old)).join(' and ')}`
+      : '';
+    removed.forEach(({ old, back }) => {
+      lines.push(back
+        ? `${tileLabel(old)} left the road. ${tileLabel(back)} goes to the bottom of the deck.`
+        : `${tileLabel(old)} left the road and is out of the game.`);
+    });
     game.sit = {
       type: 'newtile', title: 'New Road Tile', dice: [],
-      text: `New lead: ${tileLabel(game.lead)}`,
-      sub: fate,
+      text: lead ? `New lead: ${tileLabel(lead.code)}` : 'The road deck is empty',
+      sub: lines.join('\n'),
+      alert,
     };
     save();
-    renderTiles(true);
+    renderTiles(added.length);
     renderSheet(false);
   }
 
@@ -608,6 +721,7 @@
   // ------------------------------------------------------------------
   function openMenu() {
     el.menuExpansion.textContent = game.settings.expansion ? 'On' : 'Off';
+    el.menuIgnition.textContent = game.settings.ignition ? 'On' : 'Off';
     el.menuRoadDie.textContent = game.settings.roadDie ? 'On' : 'Off';
     el.menuLayer.hidden = false;
   }
